@@ -904,10 +904,10 @@ export function Screen05Result() {
           <div className="flex items-start justify-between gap-4">
             <div>
               <div className="flex flex-wrap gap-2">
-                <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-semibold text-muted-foreground">
+                <span className="rounded-full bg-violet-100 px-2.5 py-1 text-xs font-semibold text-violet-700 dark:bg-violet-500/20 dark:text-violet-300">
                   최적의 추천
                 </span>
-                <span className="rounded-full bg-blue-100 px-2.5 py-1 text-xs font-semibold text-blue-700 dark:bg-blue-500/20 dark:text-blue-300">
+                <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300">
                   필참 {RESULT.attend.required} 전원 참석
                 </span>
               </div>
@@ -920,7 +920,7 @@ export function Screen05Result() {
                 시간 불가
               </div>
             </div>
-            <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white">
+            <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white">
               <HugeiconsIcon icon={Tick02Icon} className="size-6" />
             </span>
           </div>
@@ -933,7 +933,7 @@ export function Screen05Result() {
             <ul className="flex flex-col gap-1.5">
               {RESULT.reasons.map((r) => (
                 <li key={r} className="flex gap-2 text-sm text-muted-foreground">
-                  <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-blue-500" />
+                  <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-emerald-500" />
                   {r}
                 </li>
               ))}
@@ -971,13 +971,13 @@ export function Screen05Result() {
                   key={c.day.key}
                   className={cn(
                     "grid grid-cols-[7.5rem_1fr_auto] items-center gap-x-4 border-t px-4 py-2.5 text-sm",
-                    c.chosen && "bg-blue-50 dark:bg-blue-500/10"
+                    c.chosen && "bg-emerald-50 dark:bg-emerald-500/10"
                   )}
                 >
                   <span
                     className={cn(
                       "font-semibold",
-                      c.chosen && "text-blue-700 dark:text-blue-400"
+                      c.chosen && "text-emerald-700 dark:text-emerald-400"
                     )}
                   >
                     {c.day.date}({c.day.label}) 14:00
@@ -989,7 +989,7 @@ export function Screen05Result() {
                     className={cn(
                       "text-right font-semibold tabular-nums",
                       c.chosen
-                        ? "text-blue-700 dark:text-blue-400"
+                        ? "text-emerald-700 dark:text-emerald-400"
                         : "text-muted-foreground"
                     )}
                   >
@@ -1014,14 +1014,14 @@ export function Screen05Result() {
                   key={t.time}
                   className={cn(
                     "grid grid-cols-[4.5rem_1fr_auto] items-center gap-x-4 border-t px-4 py-2.5 text-sm first:border-t-0",
-                    t.state === "chosen" && "bg-blue-50 dark:bg-blue-500/10"
+                    t.state === "chosen" && "bg-emerald-50 dark:bg-emerald-500/10"
                   )}
                 >
                   <span
                     className={cn(
                       "font-semibold tabular-nums",
                       t.state === "chosen"
-                        ? "text-blue-700 dark:text-blue-400"
+                        ? "text-emerald-700 dark:text-emerald-400"
                         : t.state === "excluded"
                           ? "text-muted-foreground line-through"
                           : ""
@@ -1036,7 +1036,7 @@ export function Screen05Result() {
                     className={cn(
                       "text-right text-xs font-semibold",
                       t.state === "chosen"
-                        ? "text-blue-700 dark:text-blue-400"
+                        ? "text-emerald-700 dark:text-emerald-400"
                         : "text-muted-foreground"
                     )}
                   >
