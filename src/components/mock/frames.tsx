@@ -5,9 +5,6 @@ import {
   Home01Icon,
   Add01Icon,
   Settings01Icon,
-  Notification02Icon,
-  UserGroupIcon,
-  CalendarCheckIcon,
 } from "@hugeicons/core-free-icons"
 
 import { cn } from "@/lib/utils"
@@ -271,87 +268,23 @@ export function OrganizerShell({
 }
 
 /* ------------------------------------------------------------------ */
-/* 참여자 화면용 셸 — 좌측 고정 내비(초대 알림 · 참석자 목록 · 회의 결과)        */
+/* 참여자 화면용 셸                                                     */
 /* ------------------------------------------------------------------ */
 
-export type ParticipantNavKey = "invited" | "members" | "result"
-
-type ParticipantNavItem = {
-  key: ParticipantNavKey
-  label: string
-  icon: typeof Home01Icon
-}
-
-const PARTICIPANT_NAV: ParticipantNavItem[] = [
-  { key: "invited", label: "초대 알림", icon: Notification02Icon },
-  { key: "members", label: "참석자 목록", icon: UserGroupIcon },
-  { key: "result", label: "회의 결과", icon: CalendarCheckIcon },
-]
-
-/** 사이드바 항목 → 카탈로그 화면 id */
-const PARTICIPANT_NAV_TARGET_ID: Record<ParticipantNavKey, string> = {
-  invited: "invited",
-  members: "members",
-  result: "result-view",
-}
-
-function ParticipantNavLink({
-  item,
-  active,
-}: {
-  item: ParticipantNavItem
-  active: boolean
-}) {
-  const goTo = useScreenNav()
-  return (
-    <button
-      type="button"
-      onClick={() => goTo(PARTICIPANT_NAV_TARGET_ID[item.key])}
-      className={cn(
-        "flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[13px] transition-colors",
-        active
-          ? "bg-blue-100 font-semibold text-blue-700 dark:bg-blue-500/15 dark:text-blue-400"
-          : "text-muted-foreground hover:bg-muted"
-      )}
-    >
-      <HugeiconsIcon icon={item.icon} className="size-4" />
-      {item.label}
-    </button>
-  )
-}
-
-/**
- * 참여자용 셸 — 주최자 셸과 같은 좌측 고정 내비 레이아웃을 쓰되,
- * 항목은 참여자 시점의 세 화면(초대 알림·참석자 목록·회의 결과)만 보여준다.
- */
+/** 참여자용 셸 — 좌측 내비 없이 가운데 정렬된 카드. 너비를 제한하지 않아 프레임 전체를 채운다 */
 export function ParticipantShell({
-  active,
   children,
   width,
 }: {
-  active: ParticipantNavKey
   children: ReactNode
   width?: string
 }) {
   return (
-    <div className="flex overflow-hidden rounded-2xl border bg-card shadow-[0_10px_34px_-14px_rgb(2_6_23/0.18)]">
-      <aside className="flex min-h-150 w-52 shrink-0 flex-col border-r bg-sidebar py-4">
-        <div className="px-4 pb-4">
-          <NodtimeLogo size="sm" />
-        </div>
-        <nav className="flex flex-col gap-0.5 px-2">
-          {PARTICIPANT_NAV.map((item) => (
-            <ParticipantNavLink
-              key={item.key}
-              item={item}
-              active={item.key === active}
-            />
-          ))}
-        </nav>
-      </aside>
-      <div className="flex min-w-0 flex-1 flex-col items-center bg-muted/40 px-6 py-10">
-        <div className={cn("w-full", width)}>{children}</div>
+    <div className="flex min-h-150 flex-col items-center bg-muted/40 px-6 py-10">
+      <div className="mb-6">
+        <NodtimeLogo size="sm" />
       </div>
+      <div className={cn("w-full", width)}>{children}</div>
     </div>
   )
 }

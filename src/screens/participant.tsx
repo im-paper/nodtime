@@ -23,7 +23,7 @@ const ME = PEOPLE[1] // 참여자 시점 페르소나: 서연 (필참)
 export function Screen07Invited() {
   return (
     <BrowserFrame url={MEETING.inviteUrl}>
-      <ParticipantShell active="invited">
+      <ParticipantShell>
         <div className="rounded-2xl border bg-card p-6">
           <div className="mb-4 flex flex-col items-center text-center">
             <div className="mb-3 flex -space-x-1.5">
@@ -63,7 +63,7 @@ export function Screen07Invited() {
 
           <div className="mt-3">
             <InfoBanner>
-              마이페이지에 설정해둔 비선호 시간이 자동으로 반영돼요. 이 회의를
+              설정에 등록해둔 비선호 시간이 자동으로 반영돼요. 이 회의를
               위해 다시 입력하지 않아도 괜찮아요.
             </InfoBanner>
           </div>
@@ -129,7 +129,7 @@ function MemberGroup({ label, people }: { label: string; people: Person[] }) {
 export function Screen08Members() {
   return (
     <BrowserFrame url={`${MEETING.inviteUrl}/members`}>
-      <ParticipantShell active="members">
+      <ParticipantShell>
         <div className="rounded-2xl border bg-card p-6">
           <h1 className="text-base font-bold">참석자 {PEOPLE.length}명</h1>
           <p className="mt-0.5 text-xs text-muted-foreground">
@@ -172,7 +172,7 @@ export function Screen08Members() {
 export function Screen10Result() {
   return (
     <BrowserFrame url={`${MEETING.inviteUrl}/result`}>
-      <ParticipantShell active="result">
+      <ParticipantShell>
         <div className="rounded-2xl border bg-card p-6">
           <div className="flex flex-col items-center text-center">
             <span className="mb-3 flex size-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400">
