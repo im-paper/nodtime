@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# MCP config (contains secret Figma token — do not commit)
+.mcp.json
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
