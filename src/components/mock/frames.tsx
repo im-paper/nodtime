@@ -5,9 +5,13 @@ import {
   Home01Icon,
   Add01Icon,
   Settings01Icon,
+  Notification02Icon,
+  UserGroupIcon,
+  CalendarCheckIcon,
 } from "@hugeicons/core-free-icons"
 
 import { cn } from "@/lib/utils"
+import { useScreenNav } from "@/screens/nav-context"
 
 /** 브라우저 창 목업 — 신호등 버튼 + 주소창 */
 export function BrowserFrame({
@@ -36,7 +40,7 @@ export function BrowserFrame({
 }
 
 /* ------------------------------------------------------------------ */
-/* Nodtime — 새 회의 마법사 셸 (사이드바 없이 집중형 카드)                    */
+/* Nodtime — 공용 로고                                                  */
 /* ------------------------------------------------------------------ */
 
 /** 검은 사각형 로고 + Nodtime */
@@ -66,37 +70,95 @@ export function NodtimeLogo({ size = "md" }: { size?: "sm" | "md" }) {
   )
 }
 
+/* ------------------------------------------------------------------ */
+/* 새 회의 마법사 — 좌측 내비를 유지한 채 단계만 전환                        */
+/* ------------------------------------------------------------------ */
+
+export type WizardStepId = "invite" | "setup" | "loading" | "result"
+
+/** 단계 id → 클릭 시 이동할 카탈로그 화면 id. '회의 설정'은 항상 '후보 있음' 상태로 진입 */
+const WIZARD_STEPS: { id: WizardStepId; label: string; target: string }[] = [
+  { id: "invite", label: "참여자 초대", target: "invite" },
+  { id: "setup", label: "회의 설정", target: "setup-ok" },
+  { id: "loading", label: "최적 시간 찾는 중", target: "loading" },
+  { id: "result", label: "추천 결과", target: "result" },
+]
+
+/** 상단 단계 표시 — 어느 단계든 클릭해서 자유롭게 이동 가능 */
+function WizardStepper({ current }: { current: WizardStepId }) {
+  const goTo = useScreenNav()
+  const currentIndex = WIZARD_STEPS.findIndex((s) => s.id === current)
+
+  return (
+    <div className="mb-5 flex items-center">
+      {WIZARD_STEPS.map((s, i) => {
+        const active = s.id === current
+        const done = i < currentIndex
+        return (
+          <div key={s.id} className="flex items-center">
+            <button
+              type="button"
+              onClick={() => goTo(s.target)}
+              className={cn(
+                "flex items-center gap-2 rounded-full px-3 py-1.5 text-[13px] font-medium transition-colors",
+                active
+                  ? "bg-blue-600 text-white"
+                  : done
+                    ? "text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-500/10"
+                    : "text-muted-foreground hover:bg-muted"
+              )}
+            >
+              <span
+                className={cn(
+                  "flex size-5 items-center justify-center rounded-full text-[11px] font-semibold tabular-nums",
+                  active
+                    ? "bg-white/20"
+                    : done
+                      ? "bg-blue-100 text-blue-600 dark:bg-blue-500/20"
+                      : "bg-muted"
+                )}
+              >
+                {i + 1}
+              </span>
+              {s.label}
+            </button>
+            {i < WIZARD_STEPS.length - 1 && (
+              <span className="mx-1 h-px w-4 shrink-0 bg-border" />
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 /**
- * 마법사/대시보드 공통 카드.
- * step 문자열("2 / 4")을 주면 우상단에 단계 표기, 아니면 right 슬롯을 노출.
+ * 새 회의 마법사 화면 셸 — 대시보드와 동일한 좌측 내비('새 회의' 항목이
+ * 활성 표시)를 유지한 채, 우측 콘텐츠 영역에서 단계 표시 + 카드만 바뀐다.
+ * 단계 표시를 클릭하면 어느 단계로든 자유롭게 이동할 수 있다.
  */
-export function NodtimeScreen({
+export function WizardScreen({
   step,
-  right,
   title,
   subtitle,
   children,
   className,
 }: {
-  step?: string
-  right?: ReactNode
+  step: WizardStepId
   title?: ReactNode
   subtitle?: ReactNode
   children: ReactNode
   className?: string
 }) {
   return (
-    <div className="overflow-hidden rounded-2xl border bg-card shadow-[0_10px_34px_-14px_rgb(2_6_23/0.18)]">
-      <header className="flex items-center justify-between border-b px-6 py-4">
-        <NodtimeLogo />
-        {right ??
-          (step && (
-            <span className="text-sm font-medium text-muted-foreground tabular-nums">
-              {step}
-            </span>
-          ))}
-      </header>
-      <div className={cn("p-6 md:p-8", className)}>
+    <OrganizerShell active="new">
+      <WizardStepper current={step} />
+      <div
+        className={cn(
+          "rounded-2xl border bg-card p-6 shadow-sm md:p-8",
+          className
+        )}
+      >
         {(title || subtitle) && (
           <div className="mb-6">
             {title && (
@@ -109,7 +171,7 @@ export function NodtimeScreen({
         )}
         {children}
       </div>
-    </div>
+    </OrganizerShell>
   )
 }
 
@@ -136,6 +198,13 @@ const ORGANIZER_NAV_SETTINGS: OrganizerNavItem = {
   icon: Settings01Icon,
 }
 
+/** 사이드바 항목 → 카탈로그 화면 id. '새 회의'는 참여자 초대(마법사 1단계)로 진입한다 */
+const NAV_TARGET_ID: Record<OrganizerNavKey, string> = {
+  dashboard: "dashboard",
+  new: "invite",
+  settings: "settings",
+}
+
 function OrganizerNavLink({
   item,
   active,
@@ -143,18 +212,21 @@ function OrganizerNavLink({
   item: OrganizerNavItem
   active: boolean
 }) {
+  const goTo = useScreenNav()
   return (
-    <span
+    <button
+      type="button"
+      onClick={() => goTo(NAV_TARGET_ID[item.key])}
       className={cn(
-        "flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px]",
+        "flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[13px] transition-colors",
         active
           ? "bg-blue-100 font-semibold text-blue-700 dark:bg-blue-500/15 dark:text-blue-400"
-          : "text-muted-foreground"
+          : "text-muted-foreground hover:bg-muted"
       )}
     >
       <HugeiconsIcon icon={item.icon} className="size-4" />
       {item.label}
-    </span>
+    </button>
   )
 }
 
@@ -199,23 +271,87 @@ export function OrganizerShell({
 }
 
 /* ------------------------------------------------------------------ */
-/* 참여자 화면용 셸                                                     */
+/* 참여자 화면용 셸 — 좌측 고정 내비(초대 알림 · 참석자 목록 · 회의 결과)        */
 /* ------------------------------------------------------------------ */
 
-/** 참여자용 셸 — 좌측 내비 없이 가운데 정렬된 카드. 너비를 제한하지 않아 주최자 화면(NodtimeScreen)과 동일하게 프레임 전체를 채운다 */
+export type ParticipantNavKey = "invited" | "members" | "result"
+
+type ParticipantNavItem = {
+  key: ParticipantNavKey
+  label: string
+  icon: typeof Home01Icon
+}
+
+const PARTICIPANT_NAV: ParticipantNavItem[] = [
+  { key: "invited", label: "초대 알림", icon: Notification02Icon },
+  { key: "members", label: "참석자 목록", icon: UserGroupIcon },
+  { key: "result", label: "회의 결과", icon: CalendarCheckIcon },
+]
+
+/** 사이드바 항목 → 카탈로그 화면 id */
+const PARTICIPANT_NAV_TARGET_ID: Record<ParticipantNavKey, string> = {
+  invited: "invited",
+  members: "members",
+  result: "result-view",
+}
+
+function ParticipantNavLink({
+  item,
+  active,
+}: {
+  item: ParticipantNavItem
+  active: boolean
+}) {
+  const goTo = useScreenNav()
+  return (
+    <button
+      type="button"
+      onClick={() => goTo(PARTICIPANT_NAV_TARGET_ID[item.key])}
+      className={cn(
+        "flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[13px] transition-colors",
+        active
+          ? "bg-blue-100 font-semibold text-blue-700 dark:bg-blue-500/15 dark:text-blue-400"
+          : "text-muted-foreground hover:bg-muted"
+      )}
+    >
+      <HugeiconsIcon icon={item.icon} className="size-4" />
+      {item.label}
+    </button>
+  )
+}
+
+/**
+ * 참여자용 셸 — 주최자 셸과 같은 좌측 고정 내비 레이아웃을 쓰되,
+ * 항목은 참여자 시점의 세 화면(초대 알림·참석자 목록·회의 결과)만 보여준다.
+ */
 export function ParticipantShell({
+  active,
   children,
   width,
 }: {
+  active: ParticipantNavKey
   children: ReactNode
   width?: string
 }) {
   return (
-    <div className="flex min-h-150 flex-col items-center bg-muted/40 px-6 py-10">
-      <div className="mb-6">
-        <NodtimeLogo size="sm" />
+    <div className="flex overflow-hidden rounded-2xl border bg-card shadow-[0_10px_34px_-14px_rgb(2_6_23/0.18)]">
+      <aside className="flex min-h-150 w-52 shrink-0 flex-col border-r bg-sidebar py-4">
+        <div className="px-4 pb-4">
+          <NodtimeLogo size="sm" />
+        </div>
+        <nav className="flex flex-col gap-0.5 px-2">
+          {PARTICIPANT_NAV.map((item) => (
+            <ParticipantNavLink
+              key={item.key}
+              item={item}
+              active={item.key === active}
+            />
+          ))}
+        </nav>
+      </aside>
+      <div className="flex min-w-0 flex-1 flex-col items-center bg-muted/40 px-6 py-10">
+        <div className={cn("w-full", width)}>{children}</div>
       </div>
-      <div className={cn("w-full", width)}>{children}</div>
     </div>
   )
 }

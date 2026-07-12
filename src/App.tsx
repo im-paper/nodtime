@@ -3,7 +3,7 @@ import { useState } from "react"
 import { cn } from "@/lib/utils"
 import { useTheme } from "@/components/theme-provider"
 import { NodtimeLogo } from "@/components/mock/frames"
-import { SCREEN_GROUPS, type ScreenEntry } from "@/screens"
+import { SCREEN_GROUPS, ScreenNavContext, type ScreenEntry } from "@/screens"
 
 /** 화면 목록의 버튼 한 줄 — 최상위(번호) / 자식 상태(3a·3b 들여쓰기) 공용 */
 function ScreenButton({
@@ -153,7 +153,9 @@ export function App() {
               {" — "}
               {active.desc}
             </p>
-            <ActiveScreen />
+            <ScreenNavContext.Provider value={setActiveId}>
+              <ActiveScreen />
+            </ScreenNavContext.Provider>
           </div>
         </main>
       </div>

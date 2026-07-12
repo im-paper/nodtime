@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   Add01Icon,
@@ -15,9 +15,10 @@ import {
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { NodtimeScreen, OrganizerShell } from "@/components/mock/frames"
+import { WizardScreen, OrganizerShell } from "@/components/mock/frames"
 import { Avatar, RoleBadge } from "@/components/mock/primitives"
 import { AvailabilityOverview, GridLegend } from "@/components/mock/availability"
+import { useScreenNav } from "@/screens/nav-context"
 import {
   PEOPLE,
   REQUIRED,
@@ -66,6 +67,7 @@ function StatusPill({ status }: { status: "조율 중" | "확정" }) {
 }
 
 export function Screen01Dashboard() {
+  const goTo = useScreenNav()
   return (
     <OrganizerShell active="dashboard">
       <div className="mb-6 flex items-center justify-between">
@@ -75,7 +77,7 @@ export function Screen01Dashboard() {
             내가 주최했거나 참여 중인 회의예요.
           </p>
         </div>
-        <Button size="sm">
+        <Button size="sm" onClick={() => goTo("invite")}>
           <HugeiconsIcon icon={Add01Icon} data-icon="inline-start" />
           새 회의 만들기
         </Button>
@@ -128,14 +130,23 @@ function PersonInviteRow({
   role: Role
   onRole: (role: Role) => void
 }) {
+  const isOrganizer = person.id === "wade"
   return (
     <div className="flex items-center gap-3 rounded-xl border bg-card px-4 py-3">
       <Avatar person={person} size="md" />
-      <div className="flex min-w-0 flex-1 items-center gap-1.5">
-        <span className="text-sm font-semibold">{person.name}</span>
-        {person.id === "wade" && (
-          <span className="text-xs font-normal text-muted-foreground">(나)</span>
-        )}
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-1.5">
+          <span className="text-sm font-semibold">{person.name}</span>
+          {isOrganizer && (
+            <span className="rounded-full bg-slate-900 px-1.5 py-0.5 text-[10px] font-semibold text-white dark:bg-white dark:text-slate-900">
+              주최자
+            </span>
+          )}
+          {isOrganizer && (
+            <span className="text-xs font-normal text-muted-foreground">(나)</span>
+          )}
+        </div>
+        <div className="text-[11px] text-muted-foreground">{person.title}</div>
       </div>
       {/* 필참/선참 토글 */}
       <div className="flex items-center gap-0.5 rounded-full bg-muted p-0.5 text-xs">
@@ -192,6 +203,7 @@ function InviteGroup({
 }
 
 export function Screen02Invite() {
+  const goTo = useScreenNav()
   const [roles, setRoles] = useState<Record<string, Role>>(() =>
     Object.fromEntries(PEOPLE.map((p) => [p.id, p.role]))
   )
@@ -203,8 +215,8 @@ export function Screen02Invite() {
     setRoles((prev) => ({ ...prev, [id]: role }))
 
   return (
-    <NodtimeScreen
-      step="1 / 4"
+    <WizardScreen
+      step="invite"
       title="참여자 초대"
       subtitle="동료를 추가하고 필참·선참을 정하세요. 아래에서 전원 일정을 한눈에 볼 수 있어요."
     >
@@ -227,9 +239,12 @@ export function Screen02Invite() {
           setRole={setRole}
         />
 
-        {/* 전원 가용성 개요 — 한눈에 */}
-        <div className="rounded-xl border bg-card p-4">
-          <div className="mb-3 text-sm font-semibold">참여자 가용성</div>
+        {/* 전원 가용성 개요 — 한눈에. 위 필참/선참 카드와 다른 '물러난 패널' 톤으로 구분 */}
+        <div className="rounded-2xl border bg-muted/40 p-4 dark:bg-muted/25">
+          <div className="text-sm font-semibold">가능한 시간 한눈에 보기</div>
+          <p className="mt-0.5 mb-3 text-[11px] text-muted-foreground">
+            필참·선참 전체의 일정을 요일별로 비교해요.
+          </p>
           <AvailabilityOverview roles={roles} />
           <div className="mt-3">
             <GridLegend />
@@ -237,13 +252,13 @@ export function Screen02Invite() {
         </div>
 
         <div className="flex justify-end">
-          <Button size="sm">
+          <Button size="sm" onClick={() => goTo("setup-ok")}>
             다음 · 회의 설정
             <HugeiconsIcon icon={ArrowRight01Icon} data-icon="inline-end" />
           </Button>
         </div>
       </div>
-    </NodtimeScreen>
+    </WizardScreen>
   )
 }
 
@@ -253,15 +268,18 @@ export function Screen02Invite() {
 
 function Field({
   label,
+  info,
   children,
 }: {
   label: string
+  info?: React.ReactNode
   children: React.ReactNode
 }) {
   return (
     <div>
-      <div className="mb-1.5 text-[13px] font-medium text-muted-foreground">
+      <div className="mb-1.5 flex items-center gap-1.5 text-[13px] font-medium text-muted-foreground">
         {label}
+        {info}
       </div>
       {children}
     </div>
@@ -278,6 +296,42 @@ function MemberRow({ names, role }: { names: string; role: Role }) {
 }
 
 /**
+ * 최소 인원 설정 — 필참·선참 그룹(누가 필참·선참인지)은 그대로 두고,
+ * 필참 수(예: 4명)부터 전체 인원(예: 6명)까지 숫자만 있는 버튼으로 고른다.
+ * 첫 버튼(맨 왼쪽)이 필참 수라 기본값으로 항상 선택돼 있다.
+ */
+const TOTAL_PEOPLE = REQUIRED.length + OPTIONAL.length
+const QUORUM_OPTIONS = Array.from(
+  { length: TOTAL_PEOPLE - REQUIRED.length + 1 },
+  (_, i) => REQUIRED.length + i
+)
+
+function QuorumButton({
+  count,
+  active,
+  onClick,
+}: {
+  count: number
+  active: boolean
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "rounded-full border px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors",
+        active
+          ? "border-blue-500 text-blue-600 dark:border-blue-400 dark:text-blue-400"
+          : "border-border text-foreground hover:border-muted-foreground/40"
+      )}
+    >
+      {count}/{TOTAL_PEOPLE}
+    </button>
+  )
+}
+
+/**
  * 회의 설정 좌측 — 조건 입력 컬럼.
  * filled=false면 이름·기간·시간을 비운 기본(입력 전) 상태 (인원은 초대 단계에서 넘어옴).
  * canRecommend=false면 '추천 받기'를 비활성화하고, 왜 못 넘어가는지 힌트를 보여준다.
@@ -286,11 +340,16 @@ function SetupConditions({
   filled = true,
   canRecommend = true,
   recommendHint,
+  onRecommend,
 }: {
   filled?: boolean
   canRecommend?: boolean
   recommendHint?: string
+  onRecommend?: () => void
 }) {
+  // 필참은 항상 고정 포함, 선참을 몇 명까지 함께 요구할지 — 기본값은 필참 수
+  const [quorumIndex, setQuorumIndex] = useState(0)
+  const [showQuorumInfo, setShowQuorumInfo] = useState(false)
   return (
     <div className="flex flex-col gap-5">
       <h2 className="text-lg font-bold">회의 조건</h2>
@@ -339,6 +398,46 @@ function SetupConditions({
         </Field>
       </div>
 
+      <Field
+        label="최소 인원 설정"
+        info={
+          <button
+            type="button"
+            onClick={() => setShowQuorumInfo((v) => !v)}
+            aria-expanded={showQuorumInfo}
+            aria-label="최소 인원 설정 설명 보기"
+            className={cn(
+              "flex size-4 items-center justify-center rounded-full border text-[10px] font-bold transition-colors",
+              showQuorumInfo
+                ? "border-blue-500 bg-blue-500 text-white"
+                : "border-muted-foreground/40 text-muted-foreground hover:border-muted-foreground"
+            )}
+          >
+            i
+          </button>
+        }
+      >
+        <div className="flex flex-col gap-2">
+          <div className="flex gap-2">
+            {QUORUM_OPTIONS.map((count, i) => (
+              <QuorumButton
+                key={count}
+                count={count}
+                active={i === quorumIndex}
+                onClick={() => setQuorumIndex(i)}
+              />
+            ))}
+          </div>
+          {showQuorumInfo && (
+            <p className="rounded-lg bg-muted/60 px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">
+              필참·선참은 그대로 두고, 여기서 고른 인원 수만큼 모이면 회의가
+              성립돼요. {REQUIRED.length}/{TOTAL_PEOPLE}은 필참만, {TOTAL_PEOPLE}/
+              {TOTAL_PEOPLE}은 선참까지 전원 참석을 뜻해요.
+            </p>
+          )}
+        </div>
+      </Field>
+
       <Field label="인원 확인">
         <div className="flex flex-col gap-2">
           <MemberRow
@@ -353,7 +452,7 @@ function SetupConditions({
 
       <div>
         {canRecommend ? (
-          <Button size="sm">
+          <Button size="sm" onClick={onRecommend}>
             <HugeiconsIcon icon={SparklesIcon} data-icon="inline-start" />
             추천 받기
             <HugeiconsIcon icon={ArrowRight01Icon} data-icon="inline-end" />
@@ -390,12 +489,12 @@ const FAIL_MAX = Math.max(...SETUP_FAIL.perDay.map((p) => p.ok))
 /** 성립 가능/불가 배지 */
 function VerdictChip({ tone }: { tone: "ok" | "fail" }) {
   return tone === "ok" ? (
-    <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-400">
+    <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-400">
       <HugeiconsIcon icon={Tick02Icon} className="size-3" />
       성립 가능
     </span>
   ) : (
-    <span className="inline-flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-400">
+    <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-400">
       <HugeiconsIcon icon={AlertCircleIcon} className="size-3" />
       성립 불가
     </span>
@@ -504,8 +603,8 @@ function SetupPreview({
 }) {
   return (
     <div className="rounded-2xl border bg-muted/40 p-5 dark:bg-muted/25">
-      <div className="flex items-center justify-between gap-2">
-        <h2 className="text-lg font-bold">실시간 미리보기</h2>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="shrink-0 text-lg font-bold whitespace-nowrap">실시간 미리보기</h2>
         {state === "ok" && <VerdictChip tone="ok" />}
         {state === "fail" && <VerdictChip tone="fail" />}
       </div>
@@ -527,11 +626,11 @@ function SetupPreview({
         </div>
       ) : state === "fail" ? (
         <div className="mt-4 flex flex-col gap-4">
-          <div className="flex items-end gap-2">
+          <div className="flex flex-col gap-0.5">
             <span className="text-3xl font-bold tabular-nums text-red-600 dark:text-red-400">
               {SETUP_FAIL.candidateCount}개
             </span>
-            <span className="pb-1 text-[11px] text-muted-foreground">
+            <span className="text-[11px] text-muted-foreground">
               필참 최소 인원 {SETUP_FAIL.quorumLabel} 미충족
             </span>
           </div>
@@ -565,11 +664,11 @@ function SetupPreview({
         </div>
       ) : (
         <div className="mt-4 flex flex-col gap-4">
-          <div className="flex items-end gap-2">
+          <div className="flex flex-col gap-0.5">
             <span className="text-3xl font-bold tabular-nums">
               {PREVIEW.candidateCount}개
             </span>
-            <span className="pb-1 text-[11px] text-muted-foreground">
+            <span className="text-[11px] text-muted-foreground">
               예상 후보 · 필참 {REQ_TOTAL}명 기준
             </span>
           </div>
@@ -594,8 +693,8 @@ function SetupPreview({
 /** 기본 — 아직 이름·기간·시간을 입력하지 않아 미리보기가 비어 있는 진입 화면 */
 export function Screen03SetupBase() {
   return (
-    <NodtimeScreen step="2 / 4">
-      <div className="grid gap-8 md:grid-cols-[1.4fr_1fr]">
+    <WizardScreen step="setup">
+      <div className="grid gap-8 md:grid-cols-[1.1fr_1fr]">
         <SetupConditions
           filled={false}
           canRecommend={false}
@@ -603,19 +702,20 @@ export function Screen03SetupBase() {
         />
         <SetupPreview state="empty" />
       </div>
-    </NodtimeScreen>
+    </WizardScreen>
   )
 }
 
 /** 후보 있음 — 조건을 넣어 성립 가능성이 나온 상태 */
 export function Screen03Setup() {
+  const goTo = useScreenNav()
   return (
-    <NodtimeScreen step="2 / 4">
-      <div className="grid gap-8 md:grid-cols-[1.4fr_1fr]">
-        <SetupConditions />
+    <WizardScreen step="setup">
+      <div className="grid gap-8 md:grid-cols-[1.1fr_1fr]">
+        <SetupConditions onRecommend={() => goTo("loading")} />
         <SetupPreview state="ok" />
       </div>
-    </NodtimeScreen>
+    </WizardScreen>
   )
 }
 
@@ -625,6 +725,7 @@ export function Screen03Setup() {
 
 /** 성립 실패 풀카드 — 왜 안 되는지(병목) + 어떻게 풀지(해결 옵션) */
 function FormationFailCard() {
+  const goTo = useScreenNav()
   return (
     <div className="rounded-2xl border bg-card p-5 md:p-6">
       {/* 헤드라인 — 실패이되 바로 해결로 넘어가는 톤 */}
@@ -671,6 +772,7 @@ function FormationFailCard() {
             <button
               key={o.label}
               type="button"
+              onClick={() => goTo("setup-ok")}
               className="group flex w-full items-center justify-between gap-3 rounded-xl border bg-background px-4 py-3 text-left transition-colors hover:border-blue-300 hover:bg-blue-50/60 dark:hover:border-blue-500/40 dark:hover:bg-blue-500/10"
             >
               <span className="min-w-0">
@@ -693,9 +795,9 @@ function FormationFailCard() {
 
 export function Screen03bSetupFail() {
   return (
-    <NodtimeScreen step="2 / 4">
+    <WizardScreen step="setup">
       <div className="flex flex-col gap-8">
-        <div className="grid gap-8 md:grid-cols-[1.4fr_1fr]">
+        <div className="grid gap-8 md:grid-cols-[1.1fr_1fr]">
           <SetupConditions
             canRecommend={false}
             recommendHint="지금 조건으론 성립하지 않아요. 아래 해결 옵션으로 조건을 먼저 바꿔 주세요."
@@ -704,7 +806,7 @@ export function Screen03bSetupFail() {
         </div>
         <FormationFailCard />
       </div>
-    </NodtimeScreen>
+    </WizardScreen>
   )
 }
 
@@ -713,8 +815,16 @@ export function Screen03bSetupFail() {
 /* ---------------------------------------------------------- */
 
 export function Screen04Loading() {
+  const goTo = useScreenNav()
+
+  // 실제 계산을 흉내내는 연출 — 잠시 후 자동으로 결과 화면으로 넘어간다
+  useEffect(() => {
+    const timer = setTimeout(() => goTo("result"), 1800)
+    return () => clearTimeout(timer)
+  }, [goTo])
+
   return (
-    <NodtimeScreen step="3 / 4">
+    <WizardScreen step="loading">
       <div className="mx-auto max-w-xl">
         <div className="text-center">
           <h1 className="text-xl font-bold">최적 시간을 찾는 중</h1>
@@ -773,7 +883,7 @@ export function Screen04Loading() {
           {LOADING.summary}
         </p>
       </div>
-    </NodtimeScreen>
+    </WizardScreen>
   )
 }
 
@@ -782,162 +892,165 @@ export function Screen04Loading() {
 /* ---------------------------------------------------------- */
 
 export function Screen05Result() {
+  const goTo = useScreenNav()
   const [showAlt, setShowAlt] = useState(false)
   const alt = CANDIDATES.find((c) => c.day.key === "thu")
 
   return (
-    <NodtimeScreen step="4 / 4">
+    <WizardScreen step="result">
       <div className="flex flex-col gap-6">
         {/* 히어로 */}
-        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6 dark:border-emerald-500/30 dark:bg-emerald-500/10">
+        <div className="rounded-2xl border bg-card p-6">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <div className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">
-                추천 일정
-              </div>
-              <div className="mt-1 text-2xl font-bold">
-                {RESULT.day.full} {RESULT.time}
-              </div>
-              <div className="mt-3 flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2">
+                <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-semibold text-muted-foreground">
+                  최적의 추천
+                </span>
                 <span className="rounded-full bg-blue-100 px-2.5 py-1 text-xs font-semibold text-blue-700 dark:bg-blue-500/20 dark:text-blue-300">
                   필참 {RESULT.attend.required} 전원 참석
                 </span>
-                <span className="rounded-full border border-emerald-300 bg-white px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:border-emerald-500/40 dark:bg-transparent dark:text-emerald-300">
-                  가장 편한 시간
-                </span>
               </div>
-              <div className="mt-2 text-xs text-emerald-800/80 dark:text-emerald-300/80">
-                전체 {RESULT.attend.total}명 중 {RESULT.attend.attending}명 참석 · 선참
-                유나는 이 시간 불가
+              <div className="mt-3 text-2xl font-bold">
+                {RESULT.day.full} {RESULT.time}
+              </div>
+              <div className="mt-2 text-xs text-muted-foreground">
+                전체 {RESULT.attend.total}명 중 {RESULT.attend.attending}명 참석 ·{" "}
+                <span className="font-medium text-foreground">선참 유나</span>는 이
+                시간 불가
               </div>
             </div>
-            <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white">
+            <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white">
               <HugeiconsIcon icon={Tick02Icon} className="size-6" />
             </span>
           </div>
         </div>
 
-        {/* 추천 이유 */}
-        <section>
-          <h3 className="mb-2 text-sm font-semibold">추천 이유</h3>
-          <ul className="flex flex-col gap-1.5">
-            {RESULT.reasons.map((r) => (
-              <li key={r} className="flex gap-2 text-sm text-muted-foreground">
-                <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-blue-500" />
-                {r}
-              </li>
-            ))}
-          </ul>
-        </section>
+        {/* 추천 이유 · 상황 안내 */}
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <section className="rounded-xl border bg-card p-4">
+            <h3 className="mb-2 text-sm font-semibold">추천 이유</h3>
+            <ul className="flex flex-col gap-1.5">
+              {RESULT.reasons.map((r) => (
+                <li key={r} className="flex gap-2 text-sm text-muted-foreground">
+                  <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-blue-500" />
+                  {r}
+                </li>
+              ))}
+            </ul>
+          </section>
 
-        {/* 상황 안내 */}
-        <div className="flex flex-col gap-2">
-          <div className="flex items-start gap-2.5 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
-            <HugeiconsIcon icon={AlertCircleIcon} className="mt-0.5 size-4 shrink-0" />
-            <span>{RESULT.softNote}</span>
-          </div>
-          <div className="flex items-start gap-2.5 rounded-xl bg-blue-50 px-4 py-3 text-sm text-blue-800 dark:bg-blue-500/10 dark:text-blue-300">
-            <HugeiconsIcon icon={UserGroupIcon} className="mt-0.5 size-4 shrink-0" />
-            <span>{RESULT.optionalNote}</span>
+          <div className="flex flex-col gap-2">
+            <div className="flex items-start gap-2.5 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
+              <HugeiconsIcon icon={AlertCircleIcon} className="mt-0.5 size-4 shrink-0" />
+              <span>{RESULT.softNote}</span>
+            </div>
+            <div className="flex items-start gap-2.5 rounded-xl bg-blue-50 px-4 py-3 text-sm text-blue-800 dark:bg-blue-500/10 dark:text-blue-300">
+              <HugeiconsIcon icon={UserGroupIcon} className="mt-0.5 size-4 shrink-0" />
+              <span>{RESULT.optionalNote}</span>
+            </div>
           </div>
         </div>
 
-        {/* 요일 비교 — 왜 수요일 */}
-        <section>
-          <h3 className="mb-2 text-sm font-semibold">
-            요일 비교{" "}
-            <span className="font-normal text-muted-foreground">· 왜 수요일</span>
-          </h3>
-          <div className="overflow-hidden rounded-xl border">
-            <div className="grid grid-cols-[7.5rem_1fr_auto] gap-x-4 bg-muted/50 px-4 py-2 text-[11px] font-medium text-muted-foreground">
-              <span>날짜</span>
-              <span>판정</span>
-              <span className="text-right">참석</span>
+        {/* 요일 비교 · 시간 비교 */}
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          {/* 요일 비교 — 왜 수요일 */}
+          <section>
+            <h3 className="mb-2 text-sm font-semibold">
+              요일 비교{" "}
+              <span className="font-normal text-muted-foreground">· 왜 수요일</span>
+            </h3>
+            <div className="overflow-hidden rounded-xl border">
+              <div className="grid grid-cols-[7.5rem_1fr_auto] gap-x-4 bg-muted/50 px-4 py-2 text-[11px] font-medium text-muted-foreground">
+                <span>날짜</span>
+                <span>판정</span>
+                <span className="text-right">참석</span>
+              </div>
+              {CANDIDATES.map((c) => (
+                <div
+                  key={c.day.key}
+                  className={cn(
+                    "grid grid-cols-[7.5rem_1fr_auto] items-center gap-x-4 border-t px-4 py-2.5 text-sm",
+                    c.chosen && "bg-blue-50 dark:bg-blue-500/10"
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "font-semibold",
+                      c.chosen && "text-blue-700 dark:text-blue-400"
+                    )}
+                  >
+                    {c.day.date}({c.day.label}) 14:00
+                  </span>
+                  <span className="truncate text-xs text-muted-foreground">
+                    {c.verdict}
+                  </span>
+                  <span
+                    className={cn(
+                      "text-right font-semibold tabular-nums",
+                      c.chosen
+                        ? "text-blue-700 dark:text-blue-400"
+                        : "text-muted-foreground"
+                    )}
+                  >
+                    {c.ok}/{c.total}
+                  </span>
+                </div>
+              ))}
             </div>
-            {CANDIDATES.map((c) => (
-              <div
-                key={c.day.key}
-                className={cn(
-                  "grid grid-cols-[7.5rem_1fr_auto] items-center gap-x-4 border-t px-4 py-2.5 text-sm",
-                  c.chosen && "bg-emerald-50 dark:bg-emerald-500/10"
-                )}
-              >
-                <span
-                  className={cn(
-                    "font-semibold",
-                    c.chosen && "text-emerald-700 dark:text-emerald-400"
-                  )}
-                >
-                  {c.day.date}({c.day.label}) 14:00
-                </span>
-                <span className="truncate text-xs text-muted-foreground">
-                  {c.verdict}
-                </span>
-                <span
-                  className={cn(
-                    "text-right font-semibold tabular-nums",
-                    c.chosen
-                      ? "text-emerald-700 dark:text-emerald-400"
-                      : "text-muted-foreground"
-                  )}
-                >
-                  {c.ok}/{c.total}
-                </span>
-              </div>
-            ))}
-          </div>
-        </section>
+          </section>
 
-        {/* 시간 비교 — 수요일 안에서 왜 14:00 */}
-        <section>
-          <h3 className="mb-2 text-sm font-semibold">
-            시간 비교{" "}
-            <span className="font-normal text-muted-foreground">
-              · 수요일 안에서
-            </span>
-          </h3>
-          <div className="overflow-hidden rounded-xl border">
-            {WED_TIMES.map((t) => (
-              <div
-                key={t.time}
-                className={cn(
-                  "grid grid-cols-[4.5rem_1fr_auto] items-center gap-x-4 border-t px-4 py-2.5 text-sm first:border-t-0",
-                  t.state === "chosen" && "bg-emerald-50 dark:bg-emerald-500/10"
-                )}
-              >
-                <span
+          {/* 시간 비교 — 수요일 안에서 왜 14:00 */}
+          <section>
+            <h3 className="mb-2 text-sm font-semibold">
+              시간 비교{" "}
+              <span className="font-normal text-muted-foreground">
+                · 수요일 안에서
+              </span>
+            </h3>
+            <div className="overflow-hidden rounded-xl border">
+              {WED_TIMES.map((t) => (
+                <div
+                  key={t.time}
                   className={cn(
-                    "font-semibold tabular-nums",
-                    t.state === "chosen"
-                      ? "text-emerald-700 dark:text-emerald-400"
+                    "grid grid-cols-[4.5rem_1fr_auto] items-center gap-x-4 border-t px-4 py-2.5 text-sm first:border-t-0",
+                    t.state === "chosen" && "bg-blue-50 dark:bg-blue-500/10"
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "font-semibold tabular-nums",
+                      t.state === "chosen"
+                        ? "text-blue-700 dark:text-blue-400"
+                        : t.state === "excluded"
+                          ? "text-muted-foreground line-through"
+                          : ""
+                    )}
+                  >
+                    {t.time}
+                  </span>
+                  <span className="truncate text-xs text-muted-foreground">
+                    {t.note}
+                  </span>
+                  <span
+                    className={cn(
+                      "text-right text-xs font-semibold",
+                      t.state === "chosen"
+                        ? "text-blue-700 dark:text-blue-400"
+                        : "text-muted-foreground"
+                    )}
+                  >
+                    {t.state === "chosen"
+                      ? "선택"
                       : t.state === "excluded"
-                        ? "text-muted-foreground line-through"
-                        : ""
-                  )}
-                >
-                  {t.time}
-                </span>
-                <span className="truncate text-xs text-muted-foreground">
-                  {t.note}
-                </span>
-                <span
-                  className={cn(
-                    "text-right text-xs font-semibold",
-                    t.state === "chosen"
-                      ? "text-emerald-700 dark:text-emerald-400"
-                      : "text-muted-foreground"
-                  )}
-                >
-                  {t.state === "chosen"
-                    ? "선택"
-                    : t.state === "excluded"
-                      ? "제외"
-                      : "가능"}
-                </span>
-              </div>
-            ))}
-          </div>
-        </section>
+                        ? "제외"
+                        : "가능"}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </section>
+        </div>
 
         {/* 대안 상세 — 구 '일부 불참' 내용을 흡수 */}
         {showAlt && alt && (
@@ -964,9 +1077,11 @@ export function Screen05Result() {
           >
             {showAlt ? "대안 닫기" : "대안 보기"}
           </Button>
-          <Button size="sm">이 시간으로 확정</Button>
+          <Button size="sm" onClick={() => goTo("dashboard")}>
+            이 시간으로 확정
+          </Button>
         </div>
       </div>
-    </NodtimeScreen>
+    </WizardScreen>
   )
 }

@@ -23,7 +23,7 @@ const ME = PEOPLE[1] // 참여자 시점 페르소나: 서연 (필참)
 export function Screen07Invited() {
   return (
     <BrowserFrame url={MEETING.inviteUrl}>
-      <ParticipantShell>
+      <ParticipantShell active="invited">
         <div className="rounded-2xl border bg-card p-6">
           <div className="mb-4 flex flex-col items-center text-center">
             <div className="mb-3 flex -space-x-1.5">
@@ -69,8 +69,10 @@ export function Screen07Invited() {
           </div>
 
           <div className="mt-4 flex flex-col gap-2">
-            <Button className="w-full">확인했어요</Button>
-            <Button variant="ghost" className="w-full">
+            <Button size="xl" className="w-full">
+              확인했어요
+            </Button>
+            <Button variant="ghost" size="xl" className="w-full">
               참석자 목록 보기
               <HugeiconsIcon icon={ArrowRight01Icon} data-icon="inline-end" />
             </Button>
@@ -94,25 +96,31 @@ function MemberGroup({ label, people }: { label: string; people: Person[] }) {
         <span className="text-xs text-muted-foreground">{people.length}명</span>
       </div>
       <div className="flex flex-col divide-y rounded-xl border bg-card">
-        {people.map((p) => (
-          <div key={p.id} className="flex items-center gap-3 px-4 py-2.5">
-            <Avatar person={p} />
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1.5 text-sm font-medium">
-                {p.name}
-                {p.id === ME.id && (
-                  <span className="text-[11px] font-normal text-muted-foreground">
-                    (나)
-                  </span>
-                )}
+        {people.map((p) => {
+          const isOrganizer = p.id === "wade"
+          return (
+            <div key={p.id} className="flex items-center gap-3 px-4 py-2.5">
+              <Avatar person={p} />
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5 text-sm font-medium">
+                  {p.name}
+                  {isOrganizer && (
+                    <span className="rounded-full bg-slate-900 px-1.5 py-0.5 text-[10px] font-semibold text-white dark:bg-white dark:text-slate-900">
+                      주최자
+                    </span>
+                  )}
+                  {p.id === ME.id && (
+                    <span className="text-[11px] font-normal text-muted-foreground">
+                      (나)
+                    </span>
+                  )}
+                </div>
+                <div className="text-[11px] text-muted-foreground">{p.title}</div>
               </div>
-              {p.note && (
-                <div className="text-[11px] text-muted-foreground">{p.note}</div>
-              )}
+              <RoleBadge role={p.role} />
             </div>
-            <RoleBadge role={p.role} />
-          </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )
@@ -121,7 +129,7 @@ function MemberGroup({ label, people }: { label: string; people: Person[] }) {
 export function Screen08Members() {
   return (
     <BrowserFrame url={`${MEETING.inviteUrl}/members`}>
-      <ParticipantShell>
+      <ParticipantShell active="members">
         <div className="rounded-2xl border bg-card p-6">
           <h1 className="text-base font-bold">참석자 {PEOPLE.length}명</h1>
           <p className="mt-0.5 text-xs text-muted-foreground">
@@ -133,11 +141,11 @@ export function Screen08Members() {
             <MemberGroup label="선참 · 가능하면 참석" people={OPTIONAL} />
           </div>
 
-          {/* 전원 가용성 개요 — 주최자 "참여자 초대" 화면과 동일한 그리드 */}
-          <div className="mt-5 rounded-xl border bg-muted/30 p-4">
-            <div className="text-sm font-semibold">참여자 가용성</div>
+          {/* 전원 가용성 개요 — 주최자 "참여자 초대" 화면과 동일한 그리드·톤 */}
+          <div className="mt-5 rounded-2xl border bg-muted/40 p-4 dark:bg-muted/25">
+            <div className="text-sm font-semibold">가능한 시간 한눈에 보기</div>
             <p className="mt-0.5 mb-3 text-[11px] text-muted-foreground">
-              읽기 전용이에요
+              필참·선참 전체의 일정이에요. 읽기 전용이라 수정할 순 없어요.
             </p>
             <AvailabilityOverview />
             <div className="mt-3">
@@ -164,7 +172,7 @@ export function Screen08Members() {
 export function Screen10Result() {
   return (
     <BrowserFrame url={`${MEETING.inviteUrl}/result`}>
-      <ParticipantShell>
+      <ParticipantShell active="result">
         <div className="rounded-2xl border bg-card p-6">
           <div className="flex flex-col items-center text-center">
             <span className="mb-3 flex size-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400">
@@ -213,7 +221,7 @@ export function Screen10Result() {
             </div>
           </div>
 
-          <Button size="lg" className="mt-4 w-full">
+          <Button size="xl" className="mt-4 w-full">
             내 캘린더에서 보기
           </Button>
         </div>
