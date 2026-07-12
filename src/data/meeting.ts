@@ -6,7 +6,8 @@ export type Person = {
   id: string
   name: string
   role: Role
-  note?: string
+  /** 직급/직책 — 참여자 목록에 이름과 함께 표기 */
+  title: string
   /** 아바타 배경용 tailwind 클래스 */
   color: string
   calendarConnected: boolean
@@ -17,7 +18,7 @@ export const PEOPLE: Person[] = [
     id: "wade",
     name: "지훈",
     role: "필참",
-    note: "주최자 겸 필참",
+    title: "대표",
     color: "bg-blue-500",
     calendarConnected: true,
   },
@@ -25,7 +26,7 @@ export const PEOPLE: Person[] = [
     id: "a",
     name: "서연",
     role: "필참",
-    note: "목요일 연차",
+    title: "PD",
     color: "bg-emerald-500",
     calendarConnected: true,
   },
@@ -33,7 +34,7 @@ export const PEOPLE: Person[] = [
     id: "b",
     name: "민준",
     role: "필참",
-    note: "월·화 외근 · 점심 직후 비선호",
+    title: "디자이너",
     color: "bg-amber-500",
     calendarConnected: true,
   },
@@ -41,15 +42,15 @@ export const PEOPLE: Person[] = [
     id: "c",
     name: "도윤",
     role: "필참",
-    note: "금요일 고객 미팅",
+    title: "마케터",
     color: "bg-rose-500",
     calendarConnected: true,
   },
   {
     id: "d",
     name: "하린",
-    role: "필참",
-    note: "월요일 외근",
+    role: "선참",
+    title: "개발자",
     color: "bg-indigo-500",
     calendarConnected: true,
   },
@@ -57,7 +58,7 @@ export const PEOPLE: Person[] = [
     id: "e",
     name: "유나",
     role: "선참",
-    note: "수요일 오후 다른 회의",
+    title: "리서처",
     color: "bg-teal-500",
     calendarConnected: true,
   },
@@ -191,7 +192,7 @@ export const WED_RESULT = {
       step: 1,
       title: "필참 인원 참석 가능 여부",
       detail:
-        "수요일은 필참 5명(지훈·서연·민준·도윤·하린) 전원이 가능한 유일한 요일이에요. 수요일 안에서 13:00, 14:00, 15:00, 16:00 네 후보가 남았어요.",
+        "수요일은 필참 4명(지훈·서연·민준·도윤) 전원이 가능한 유일한 요일이에요. 수요일 안에서 13:00, 14:00, 15:00, 16:00 네 후보가 남았어요.",
       result: "후보 4개, 동률 → 다음 단계로",
       decided: false,
     },
@@ -223,7 +224,7 @@ export const WED_RESULT = {
     {
       rank: 1,
       label: "7월 15일 (수) 14:00 ~ 15:00",
-      required: "필참 5/5",
+      required: "필참 4/4",
       optional: "선참 유나 가능",
       note: "비선호 시간 회피",
       chosen: true,
@@ -231,7 +232,7 @@ export const WED_RESULT = {
     {
       rank: 2,
       label: "7월 15일 (수) 15:00 ~ 16:00",
-      required: "필참 5/5",
+      required: "필참 4/4",
       optional: "선참 유나 가능",
       note: "14:00보다 늦은 시간",
       chosen: false,
@@ -239,7 +240,7 @@ export const WED_RESULT = {
     {
       rank: 3,
       label: "7월 15일 (수) 16:00 ~ 17:00",
-      required: "필참 5/5",
+      required: "필참 4/4",
       optional: "선참 유나 불가 (다른 회의)",
       note: "3단계에서 밀림",
       chosen: false,
@@ -247,7 +248,7 @@ export const WED_RESULT = {
     {
       rank: 4,
       label: "7월 15일 (수) 13:00 ~ 14:00",
-      required: "필참 5/5",
+      required: "필참 4/4",
       optional: "선참 유나 가능",
       note: "지훈님 비선호 시간과 겹침",
       chosen: false,
@@ -255,15 +256,15 @@ export const WED_RESULT = {
   ],
 }
 
-/** 일부 불참 예시 — 목요일 지정 시 A가 연차라 4/5 */
+/** 일부 불참 예시 — 목요일 지정 시 서연이 연차라 3/4 */
 export const THU_RESULT = {
   day: DAYS[3],
   time: "14:00 ~ 15:00",
   absent: { person: PEOPLE[1], reason: "연차" },
-  attendRatio: "4/5",
+  attendRatio: "3/4",
   alternative: {
     label: "7월 15일 (수) 14:00 ~ 15:00",
-    required: "필참 5/5",
+    required: "필참 4/4",
     note: "하루 앞당기면 전원 참석할 수 있어요",
   },
 }
@@ -285,7 +286,7 @@ export const MEETING_LIST: MeetingListItem[] = [
     title: "7월 제품 로드맵 리뷰",
     status: "조율 중",
     mine: true,
-    people: "필참 5 · 선참 1",
+    people: "필참 4 · 선참 2",
     period: "7/13 (월) ~ 7/17 (금) 중 1시간",
   },
   {
@@ -444,7 +445,7 @@ export const LOADING = {
     { title: "필참 다수 불가한 시간 제외", note: "필참 4명 미만 제외" },
   ],
   criteria: [
-    { no: 1, title: "참석 인원 비교", result: "수요일 5/5 · 시간 후보 4개", fired: true },
+    { no: 1, title: "참석 인원 비교", result: "수요일 4/4 · 시간 후보 4개", fired: true },
     { no: 2, title: "필참 비선호 회피", result: "13:00 제외 → 3개", fired: true },
     { no: 3, title: "선참 참석 가능", result: "유나 오후 겹침 · 필참 기준 유지", fired: true },
     { no: 4, title: "동률이면 이른 시간", result: "14:00 선택 → 확정", fired: true },
@@ -452,18 +453,18 @@ export const LOADING = {
   summary: "수요일 필참 전원 가능 → 비선호·선참·시간까지 따져 14:00으로 좁혔어요.",
 }
 
-/** 결과 화면 — 추천 일정 + 상황 안내 (전체 6명 = 필참 5 + 선참 1) */
+/** 결과 화면 — 추천 일정 + 상황 안내 (전체 6명 = 필참 4 + 선참 2) */
 export const RESULT = {
   day: DAYS[2],
   time: REC_TIME,
   /** 참석 요약 */
   attend: {
     total: PEOPLE.length, // 6
-    required: `${REQUIRED.length}/${REQUIRED.length}`, // 5/5
-    attending: REQUIRED.length, // 5 (선참 유나는 겹쳐서 불참)
+    required: `${REQUIRED.length}/${REQUIRED.length}`, // 4/4
+    attending: REQUIRED.length + 1, // 5 (선참 하린은 참석, 유나는 겹쳐서 불참)
   },
   reasons: [
-    "필참 5명(지훈·서연·민준·도윤·하린)이 모두 가능한 유일한 날이에요",
+    "필참 4명(지훈·서연·민준·도윤)이 모두 가능한 유일한 날이에요",
     "13:00은 점심 직후라 피하고, 가장 이른 적정 시간으로 14:00을 골랐어요",
   ],
   /** 앰버 — 필참의 소프트 비선호 (참석은 가능) */
@@ -501,8 +502,8 @@ export type FailDay = { day: Day; ok: number }
 
 /**
  * "이 조건으로는 회의가 성립되지 않아요" 상태의 예시 데이터.
- * 하린(전 기간 외근)·민준(전 기간 연차)이 매일 빠지고, 다른 일정까지 겹쳐
- * 참석 가능한 필참이 날마다 1~3명 → 어느 날도 최소 4명을 채우지 못한다.
+ * 도윤(전 기간 외근)·민준(전 기간 연차)이 매일 빠지고, 다른 일정까지 겹쳐
+ * 참석 가능한 필참이 날마다 1~3명 → 어느 날도 필참 전원(4명)을 채우지 못한다.
  * perDay가 이 요일별 편차를 스트립으로 그대로 보여주고,
  * 해결 옵션은 각 지렛대가 실제로 성립을 만들어내는 경우만 제시한다.
  */
@@ -511,13 +512,13 @@ export const SETUP_FAIL = {
   candidateCount: 0,
   minRequired: MIN_REQUIRED,
   requiredTotal: REQUIRED.length,
-  /** 최소 인원 라벨 — 예: "4/5" */
+  /** 최소 인원 라벨 — 예: "4/4" */
   quorumLabel: `${MIN_REQUIRED}/${REQUIRED.length}`,
   summary: "요청 기간 안에서 필참 최소 인원을 채우는 시간이 없어요.",
   /** 요일별 참석 가능 필참 — 날마다 1~3명으로 편차, 모두 기준선(4) 아래 */
   perDay: DAYS.map((d, i) => ({ day: d, ok: [2, 3, 1, 3, 2][i] })) as FailDay[],
   bottlenecks: [
-    { person: PEOPLE.find((p) => p.id === "d")!, cause: "요청 기간 전체 외근" },
+    { person: PEOPLE.find((p) => p.id === "c")!, cause: "요청 기간 전체 외근" },
     { person: PEOPLE.find((p) => p.id === "b")!, cause: "요청 기간 전체 연차" },
   ] as FailBottleneck[],
   options: [
@@ -528,7 +529,7 @@ export const SETUP_FAIL = {
     },
     {
       label: "요청 기간을 다음 주까지 넓혀서 다시 찾기",
-      expect: "다음 주엔 하린 외근·민준 연차가 모두 끝나 필참 전원 가능한 날이 생겨요",
+      expect: "다음 주엔 도윤 외근·민준 연차가 모두 끝나 필참 전원 가능한 날이 생겨요",
       kind: "period",
     },
   ] as FailOption[],
